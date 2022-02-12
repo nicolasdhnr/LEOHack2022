@@ -62,15 +62,21 @@ class TeamController(SatControllerInterface):
         displacement_y = satellite_state.pose.y - dead_sat_state.pose.y
         displacement = math.sqrt(displacement_x ** 2 + displacement_y ** 2)
 
-        if displacement > 0.5:
-            k_x = (math.e/2.03576)**2
-            k_y = (math.e/-0.81430)**2
-        else:
-            k_x = (0.2*math.e/(x_target-1.03576))**2
-            k_y = (0.2*math.e/(y_target-(-1.81430)))**2
-
+        k_x = ((math.e / (2.03576*1.4)) ** 2)
+        k_y = ((math.e / (-0.81430*1.4)) ** 2)
         crit_damp_x = 2 * math.sqrt(self.sat_description.mass * k_x)
         crit_damp_y = 2 * math.sqrt(self.sat_description.mass * k_y)
+
+        # if displacement > 0.5:
+        #     k_x = ((math.e/(2.03576))**2)
+        #     k_y = ((math.e/(-0.81430))**2)
+        #     crit_damp_x = 2 * math.sqrt(self.sat_description.mass * k_x)
+        #     crit_damp_y = 2 * math.sqrt(self.sat_description.mass * k_y)
+        # else:
+        #     k_x = (0.2*math.e/(x_target-1.03576))**2
+        #     k_y = (0.2*math.e/(y_target-(-1.81430)))**2
+        #     crit_damp_x = 2 * math.sqrt(self.sat_description.mass * k_x)
+        #     crit_damp_y = 2 * math.sqrt(self.sat_description.mass * k_y)
 
         # Set thrust command values, basic PD controller that drives the sat to [0, -1]
         control_message.thrust.f_x = -k_x * (satellite_state.pose.x - x_target) - crit_damp_x * satellite_state.twist.v_x
