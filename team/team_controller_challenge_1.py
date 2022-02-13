@@ -61,12 +61,11 @@ class TeamController(SatControllerInterface):
         x_target = dead_sat_state.pose.x + 0.25 * math.cos(dead_sat_state.pose.theta - math.pi / 2)
         y_target = dead_sat_state.pose.y + 0.25 * math.sin(dead_sat_state.pose.theta - math.pi / 2)
 
-        k_x = (math.e / 2.03576 * 1.4) ** 2
-        k_y = (math.e / (-0.81430) * 1.4) ** 2
+        k_x = (math.e / 2.03576) ** 2
+        k_y = (math.e / (-0.81430)) ** 2
 
-        crit_damp_x = 2 * math.sqrt(self.sat_description.mass * k_x)
-        crit_damp_y = 2 * math.sqrt(self.sat_description.mass * k_y)
-
+        damp_x = 2 * math.sqrt(self.sat_description.mass * k_x) * 1.8
+        damp_y = 2 * math.sqrt(self.sat_description.mass * k_y) * 1.8
         # Define error:
         error_x = satellite_state.pose.x - x_target
         error_y = satellite_state.pose.y - y_target
@@ -75,22 +74,11 @@ class TeamController(SatControllerInterface):
         self.y_sum += error_y * 0.05
 
         # Set thrust command values, basic PD controller that drives the sat to [0, -1]
-        control_message.thrust.f_x = -k_x * error_x - crit_damp_x * satellite_state.twist.v_x
-        control_message.thrust.f_y = -k_y * error_y - crit_damp_y * satellite_state.twist.v_y
-        control_message.thrust.tau = -k_y * (satellite_state.pose.theta - dead_sat_state.pose.theta) - crit_damp_y * satellite_state.twist.omega
-        # (x_target-1.5)*2 + 1.5)
-
-        displacement_x = satellite_state.pose.x - dead_sat_state.pose.x
-        displacement_y = satellite_state.pose.y - dead_sat_state.pose.y
-        displacement = math.sqrt(displacement_x ** 2 + displacement_y ** 2)
-        vel = math.sqrt(satellite_state.twist.v_x ** 2 + satellite_state.twist.v_y ** 2)
-        if displacement < 0.5:
-            if vel > 0.2:
-                self.logger.info(f'WENT TOO FAST')
-
-        print("displacement:", displacement)
-        print("velocity:", vel)
-        print("angle", satellite_state.pose.theta)
+        control_message.thrust.f_x = -k_x * error_x - damp_x * satellite_state.twist.v_x - 2 * self.y_sum
+        control_message.thrust.f_y = -k_y * (satellite_state.pose.y - y_target) - damp_y * satellite_state.twist.v_y\
+                                     - 2 * self.y_sum
+        control_message.thrust.tau = -k_y * (satellite_state.pose.theta - dead_sat_state.pose.theta) - damp_y *\
+                                     satellite_state.twist.omega
 
         # Return control message
         return control_message

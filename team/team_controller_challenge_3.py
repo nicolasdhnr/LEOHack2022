@@ -63,8 +63,8 @@ class TeamController(SatControllerInterface):
         k_x = (math.e / 2.03576 * 1.4) ** 2
         k_y = (math.e / (-0.81430) * 1.4) ** 2
 
-        crit_damp_x = 2 * math.sqrt(self.sat_description.mass * k_x) * 0.7
-        crit_damp_y = 2 * math.sqrt(self.sat_description.mass * k_y) * 0.7
+        crit_damp_x = 2 * math.sqrt(self.sat_description.mass * k_x) * 0.9
+        crit_damp_y = 2 * math.sqrt(self.sat_description.mass * k_y) * 0.9
 
         x = satellite_state.pose.x
         y = satellite_state.pose.y
@@ -84,13 +84,13 @@ class TeamController(SatControllerInterface):
             return math.sqrt(x**2 + y**2)
 
         if cartesian_to_polar(x - dead_x, y - dead_y) <= 0.6 and not (dead_sat_state.pose.theta - math.pi / 3 < satellite_state.pose.theta < dead_sat_state.pose.theta + math.pi/3) :
-            control_message.thrust.f_x = -k_x * 0.1 * (x - 1) - crit_damp_x * satellite_state.twist.v_x
-            control_message.thrust.f_y = -k_y * 0.1 * (y - 1) - crit_damp_y * satellite_state.twist.v_y
+            control_message.thrust.f_x = -k_x * (x - 0.2) - crit_damp_x * satellite_state.twist.v_x
+            control_message.thrust.f_y = -k_y * (y - 0.2) - crit_damp_y * satellite_state.twist.v_y
             control_message.thrust.tau = -30  * (satellite_state.pose.theta - dead_sat_state.pose.theta) - crit_damp_y * satellite_state.twist.omega
 
         else:
-            control_message.thrust.f_x = -k_x * 0.1 * error_x - crit_damp_x * satellite_state.twist.v_x
-            control_message.thrust.f_y = -k_y * 0.1 * error_y - crit_damp_y * satellite_state.twist.v_y
+            control_message.thrust.f_x = -k_x * error_x - crit_damp_x * satellite_state.twist.v_x
+            control_message.thrust.f_y = -k_y * error_y - crit_damp_y * satellite_state.twist.v_y
             control_message.thrust.tau = -30 * (satellite_state.pose.theta - dead_sat_state.pose.theta) - crit_damp_y * satellite_state.twist.omega
 
         displacement_x = satellite_state.pose.x - dead_sat_state.pose.x
