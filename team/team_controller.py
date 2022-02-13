@@ -2,6 +2,7 @@ import math
 
 from sat_controller import SatControllerInterface, sat_msgs
 
+
 # Team code is written as an implementation of various methods
 # within the the generic SatControllerInterface class.
 # If you would like to see how this class works, look in sat_control/sat_controller
@@ -11,9 +12,15 @@ from sat_controller import SatControllerInterface, sat_msgs
 class TeamController(SatControllerInterface):
     """ Team control code """
 
+    def __init__(self):
+        super().__init__()
+        self.x_sum = 0
+        self.y_sum = 0
+
     def team_init(self):
         """ Runs any team based initialization """
         # Run any initialization you need
+
         self.set_mass(1)
         self.set_inertia(1)
 
@@ -33,13 +40,9 @@ class TeamController(SatControllerInterface):
         # Return team info
         return team_info
 
-    def team_run(self, system_state: sat_msgs.SystemState, satellite_state: sat_msgs.SatelliteState, dead_sat_state: sat_msgs.SatelliteState) -> sat_msgs.ControlMessage:
+    def team_run(self, system_state: sat_msgs.SystemState, satellite_state: sat_msgs.SatelliteState,
+                 dead_sat_state: sat_msgs.SatelliteState) -> sat_msgs.ControlMessage:
         """ Takes in a system state, satellite state """
-
-        print(dead_sat_state)
-        print(satellite_state)
-        print(satellite_state.fuel)
-        print(f'Mass: {self.sat_description.mass}')
 
         # Get timedelta from elapsed time
         elapsed_time = system_state.elapsedTime.ToTimedelta()
@@ -58,30 +61,25 @@ class TeamController(SatControllerInterface):
         x_target = dead_sat_state.pose.x + 0.25 * math.cos(dead_sat_state.pose.theta - math.pi / 2)
         y_target = dead_sat_state.pose.y + 0.25 * math.sin(dead_sat_state.pose.theta - math.pi / 2)
 
-        displacement_x = satellite_state.pose.x - dead_sat_state.pose.x
-        displacement_y = satellite_state.pose.y - dead_sat_state.pose.y
-        displacement = math.sqrt(displacement_x ** 2 + displacement_y ** 2)
+        k_x = ((math.e / 2.03576) ** 2)
+        k_y = ((math.e / (-0.81430)) ** 2)
 
-        k_x = ((math.e / (2.03576*1.4)) ** 2)
-        k_y = ((math.e / (-0.81430*1.4)) ** 2)
         crit_damp_x = 2 * math.sqrt(self.sat_description.mass * k_x)
         crit_damp_y = 2 * math.sqrt(self.sat_description.mass * k_y)
-
-        # if displacement > 0.5:
-        #     k_x = ((math.e/(2.03576))**2)
-        #     k_y = ((math.e/(-0.81430))**2)
-        #     crit_damp_x = 2 * math.sqrt(self.sat_description.mass * k_x)
-        #     crit_damp_y = 2 * math.sqrt(self.sat_description.mass * k_y)
-        # else:
-        #     k_x = (0.2*math.e/(x_target-1.03576))**2
-        #     k_y = (0.2*math.e/(y_target-(-1.81430)))**2
-        #     crit_damp_x = 2 * math.sqrt(self.sat_description.mass * k_x)
-        #     crit_damp_y = 2 * math.sqrt(self.sat_description.mass * k_y)
+        # Define error:
+        error_x = satellite_state.pose.x - x_target
+        error_y = satellite_state.pose.y - y_target
+        # Evaluate integral
+        self.x_sum += error_x * 0.05
+        self.y_sum += error_y * 0.05
 
         # Set thrust command values, basic PD controller that drives the sat to [0, -1]
-        control_message.thrust.f_x = -k_x * (satellite_state.pose.x - x_target) - crit_damp_x * satellite_state.twist.v_x
-        control_message.thrust.f_y = -k_y * (satellite_state.pose.y - y_target) - crit_damp_y * satellite_state.twist.v_y
-        control_message.thrust.tau = -k_y * (satellite_state.pose.theta - (dead_sat_state.pose.theta) - (math.pi / 3)) - crit_damp_y * satellite_state.twist.omega
+        control_message.thrust.f_x = -k_x * error_x - crit_damp_x * satellite_state.twist.v_x - 0.01 * self.x_sum
+        control_message.thrust.f_y = -k_y * (
+                    satellite_state.pose.y - y_target) - crit_damp_y * satellite_state.twist.v_y - 0.01 * self.y_sum
+        control_message.thrust.tau = -0.3 * ((satellite_state.pose.theta - dead_sat_state.pose.theta) - 1.30) - 0.1 \
+                                     * satellite_state.twist.omega
+
 
         # (x_target-1.5)*2 + 1.5)
 
@@ -91,16 +89,17 @@ class TeamController(SatControllerInterface):
 
         displacement_x = satellite_state.pose.x - dead_sat_state.pose.x
         displacement_y = satellite_state.pose.y - dead_sat_state.pose.y
-        displacement = math.sqrt(displacement_x**2 + displacement_y**2)
-        vel = math.sqrt(satellite_state.twist.v_x**2 + satellite_state.twist.v_y**2)
+        displacement = math.sqrt(displacement_x ** 2 + displacement_y ** 2)
+        vel = math.sqrt(satellite_state.twist.v_x ** 2 + satellite_state.twist.v_y ** 2)
         if displacement < 0.5:
-            print("VELOCITY:", vel)
             if vel > 0.2:
-                print("FAIL")
-            else:
-                print("WORKSSS")
+                self.logger.info(f'WENT TOO FAST')
+
         print("displacement:", displacement)
         print("velocity:", vel)
+        print("angle", satellite_state.pose.theta)
+        print("angle that we used as target", satellite_state.pose.theta - dead_sat_state.pose.theta - (
+                    math.pi / 3))
 
         # Return control message
         return control_message
