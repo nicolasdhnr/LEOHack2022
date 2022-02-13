@@ -74,7 +74,7 @@ class TeamController(SatControllerInterface):
         self.y_sum += error_y * 0.05
 
         # Set thrust command values, basic PD controller that drives the sat to [0, -1]
-        control_message.thrust.f_x = -k_x * error_x - crit_damp_x * satellite_state.twist.v_x -      2 * self.y_sum
+        control_message.thrust.f_x = -k_x * error_x - crit_damp_x * satellite_state.twist.v_x -      2 * self.x_sum
         control_message.thrust.f_y = -k_y * (
                     satellite_state.pose.y - y_target) - crit_damp_y * satellite_state.twist.v_y - 2 * self.y_sum
         control_message.thrust.tau = -k_y * (satellite_state.pose.theta - dead_sat_state.pose.theta) - crit_damp_y * satellite_state.twist.omega
