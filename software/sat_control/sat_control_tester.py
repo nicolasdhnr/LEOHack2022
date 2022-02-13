@@ -1,5 +1,5 @@
 import coloredlogs, logging
-from team_controller import TeamController, sat_msgs
+from team_controller_challenge_1 import TeamController, sat_msgs
 
 coloredlogs.install(level=logging.INFO)
 

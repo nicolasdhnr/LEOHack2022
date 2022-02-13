@@ -74,15 +74,11 @@ class TeamController(SatControllerInterface):
         self.y_sum += error_y * 0.05
 
         # Set thrust command values, basic PD controller that drives the sat to [0, -1]
-        control_message.thrust.f_x = -k_x * error_x - crit_damp_x * satellite_state.twist.v_x -      2 * self.x_sum
+        control_message.thrust.f_x = -k_x * error_x - crit_damp_x * satellite_state.twist.v_x - 2 * self.y_sum
         control_message.thrust.f_y = -k_y * (
                     satellite_state.pose.y - y_target) - crit_damp_y * satellite_state.twist.v_y - 2 * self.y_sum
         control_message.thrust.tau = -k_y * (satellite_state.pose.theta - dead_sat_state.pose.theta) - crit_damp_y * satellite_state.twist.omega
         # (x_target-1.5)*2 + 1.5)
-
-        # control_message.thrust.f_x = -k * (satellite_state.pose.x - (x_target)) - crit_damp * satellite_state.twist.v_x
-        # control_message.thrust.f_y = -k * (satellite_state.pose.y - (y_target)) - crit_damp * satellite_state.twist.v_y
-        # control_message.thrust.tau = -k * (satellite_state.pose.theta - (dead_sat_state.pose.theta) - (math.pi / 3)) - crit_damp * satellite_state.twist.omega
 
         displacement_x = satellite_state.pose.x - dead_sat_state.pose.x
         displacement_y = satellite_state.pose.y - dead_sat_state.pose.y
@@ -95,8 +91,6 @@ class TeamController(SatControllerInterface):
         print("displacement:", displacement)
         print("velocity:", vel)
         print("angle", satellite_state.pose.theta)
-        print("angle that we used as target", satellite_state.pose.theta - dead_sat_state.pose.theta - (
-                    math.pi / 3))
 
         # Return control message
         return control_message
